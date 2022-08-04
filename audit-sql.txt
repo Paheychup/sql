@@ -1,0 +1,9 @@
+https://www.sqlshack.com/various-techniques-to-audit-sql-server-databases/
+
+Начиная со слов:
+
+Utilizing SQL Server Extended Events
+
+И до
+
+Using SQL Server triggers

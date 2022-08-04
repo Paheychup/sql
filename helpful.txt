@@ -1,0 +1,149 @@
+EXEC  sp_helpdb --узнать размеры баз данных (Пример: EXEC  sp_helpdb QUIK_DB)
+
+ или с помощью селекта:
+
+--Узнаем общий размер БД
+   SELECT SUM(CAST(size / 128.0 AS DECIMAL(17,2))) AS [Размер в MB]
+   FROM sys.database_files
+
+   --Узнаем размер каждого файла в БД
+   SELECT name AS [Логическое имя файла], 
+	   physical_name AS [Путь и имя файла в ОС],
+	   state_desc AS [Состояние файла],
+	   CAST(size / 128.0 AS DECIMAL(17,2)) AS [Размер в MB]
+   FROM sys.database_files
+--покажет в мегабайтах, на сколько можно уменьшить файлы БД
+SELECT Name AS NameFile,
+size/128.0 - CAST(FILEPROPERTY(name, 'SpaceUsed') AS INT)/128.0 AS AvailableSpaceInMB
+FROM sys.database_files;
+
+--узнать степень фрагментации индексов в БД
+SELECT Sch.name AS SchemaName,
+Obj.name AS TableName,
+--AvgFrag.index_id,
+Inx.name AS IndexName,
+AvgFrag.avg_fragmentation_in_percent AS Fragmentation
+FROM sys.dm_db_index_physical_stats (DB_ID(), NULL, NULL, NULL, NULL) AS AvgFrag
+LEFT JOIN sys.indexes AS Inx ON AvgFrag.object_id = Inx.object_id AND AvgFrag.index_id = Inx.index_id
+LEFT JOIN sys.objects AS Obj ON AvgFrag.object_id = Obj.object_id
+LEFT JOIN sys.schemas AS Sch ON Obj.schema_id = Sch.schema_id
+WHERE AvgFrag.index_id > 0 --исключаем heap (кучу)
+--AND AvgFrag.avg_fragmentation_in_percent > 5 --5 - это минимальная степень фрагментации индекса
+
+select db_name(), host_name() --узнать имя БД, имя компьютера
+
+----------------------------------------------------------------------------------------
+
+Узнать установленную версию MS SQL Server:
+
+SELECT @@version
+
+SELECT @@version не выдает информацию об установленном сервис-паке. Уточнить этот момент можно по адресу http://support.microsoft.com/kb/321185/en. Версия 13.0.4474.0 означает, что установлен первый сервис-пак. https://support.microsoft.com/ru-ru/help/3177312/sql-server-2016-build-versions
+
+Еще один вариант запроса, позволяющий узнать версию продукта:
+
+SELECT SERVERPROPERTY (‘productversion’), SERVERPROPERTY (‘edition’), SERVERPROPERTY (‘productlevel’) https://docs.microsoft.com/ru-ru/sql/t-sql/functions/serverproperty-transact-sql?view=sql-server-2017
+
+В отличие от SELECT @@version функция SERVERPROPERTY возвращает только конкретные свойства, относящиеся к версии, что несколько удобнее.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Чтобы посмотреть количество используемой памяти Sqlserver.exe (Max server memory) нужно сделать запрос в БД:
+
+SELECT cntr_value/1024 as memory FROM  sys.dm_os_performance_counters WHERE counter_name like '%Total Server Memory%'
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Max server memory может быть изменён 2 способами:
+
+С помощью T-SQL команд
+-- Сначала включаем возможность расширенного изменения конфигурации SQL Server
+
+ sp_configure 'show advanced option', 1
+
+ RECONFIGURE
+
+ GO
+
+ -- Устанавливаем максимальное количество оперативной памяти для buffer pool в 2048
+
+ sp_configure 'max server memroy', 2048
+
+ RECONFIGURE
+
+2. С помощью SQL Server Management Studion
+
+Правая кнопка мышки на сервере > Свойства > раздел Память > указать в разделе max server memory нужное значение > ОК
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Переименовать БД, если ошибка Error: the database could not be exclusively locked to perform the operation
+
+Запустить скрипт:
+
+USE [master];
+GO
+ALTER DATABASE DB_NAME SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+--ALTER DATABASE DB_NAME SET MULTI_USER WITH ROLLBACK IMMEDIATE;
+GO
+EXEC sp_renamedb N'DB_NAME', N'DB_NAME_NEW';
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Перевести БД в offline скриптом, если ошибка.
+
+Запустить скрипт:
+
+USE [master];
+GO
+
+ALTER DATABASE DB_NAME SET OFFLINE WITH ROLLBACK IMMEDIATE
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ Модуль неторговых поручений. МНТ InstrTW. Проверка справочников МНТ.
+
+Чтобы проверить заполнение справочников МНТ (процедура, которую запускает SUP ежедневно для БД Instructions), нужно выполнить следующий запрос:
+
+Check_MNT.sql
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Смотреть зависшие запросы на сервере
+
+SuspectedQueryes.sql
+
+Если запрос "повис", то в результате селекта, в поле "status" будет запись "suspended"
+
+Узнать, кто подключен к сессии и как "убить" (kill sql) зависший запрос тут: https://docs.microsoft.com/ru-ru/sql/t-sql/language-elements/kill-transact-sql?view=sql-server-2017
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Покажет, сколько места занимает каждая таблица в БД
+
+Show_Tables_Space.sql
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Узнать типы данных в таблице БД
+
+select table_name,column_name,data_type 
+from [server_name].QUIK.INFORMATION_SCHEMA.COLUMNS where TABLE_NAME='table_name'
+
+select table_name,column_name,data_type
+from [BD-SRV-ITCQBD].QUIK.INFORMATION_SCHEMA.COLUMNS where TABLE_NAME='USERS'
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Покажет даты ресторов (развертываний из бэкапа) баз данных
+
+SELECT *
+
+FROM msdb.dbo.[restorehistory] AS r
+
+-- WHERE r.destination_database_name = ''
+
+ORDER BY r.[restore_history_id] DESC
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+

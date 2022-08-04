@@ -1,0 +1,24 @@
+--¬место <> - подставить текущий размер файла данных (не им€ базы, а им€ файла)
+--¬место <FILENAME>Ц поставить им€ файла, который жмем
+ 
+declare @size int = <>
+       ,@dif int = 10240
+       ,@i int  = 0
+       ,@file varchar(max) = '<FILENAME>'
+       ,@sql varchar(max)
+              
+print 'set NOCOUNT ON
+ 
+'
+while @i < 64
+ 
+begin
+ 
+set @size = @size - @dif
+ 
+set @sql = 'dbcc shrinkfile  ([' + @file + '],' + cast(@size as varchar) + ')
+go'
+print @sql
+ 
+set @i = @i + 1
+end

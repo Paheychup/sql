@@ -1,0 +1,12 @@
+ѕолезна€ информаци€ по миграции серверов есть на сайте https://dbatools.io/commands/ раздел Migration
+
+ѕример переноса настроек DbaDbMail с сервера 10.48.115.66 на 10.48.115.67 под уз "sharshatov"
+
+«апускать нужно в Powershell ISE
+
+¬ажно чтобы пароли дл€ уз (в данном примере sharshatov) были одинаковые на новом и старом сервере
+
+$cred = Get-Credential -Credential "sharshatov"
+Copy-DbaDbMail -Source 10.48.115.66 -Destination 10.48.115.67 -SourceSqlCredential $cred -DestinationSqlCredential $cred
+#-WhatIf
+ѕримеры миграции логинов можно посмотреть здесь https://docs.dbatools.io/Copy-DbaLogin
